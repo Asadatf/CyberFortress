@@ -717,11 +717,111 @@ class GameScene extends Phaser.Scene {
     this.visibleThreats[row][col] = false;
   }
 
+  // Fixed launchMiniGame method in GameScene with improved callback handling
+  launchMiniGame(row, col, threatType) {
+    // Save current game state and position for later use
+    this.gameState = "miniGame";
+    this.miniGameRow = row;
+    this.miniGameCol = col;
+    this.miniGameThreat = threatType;
+
+    // Pause timers during mini-game
+    if (this.revealTimer) {
+      this.revealTimer.paused = true;
+    }
+
+    if (this.hideTimer) {
+      this.hideTimer.remove();
+      this.hideTimer = null;
+    }
+
+    // Update status
+    this.statusText.setText("Launching mini-game challenge...");
+    this.statusText.setBackgroundColor("#00498b");
+
+    // Define a callback function to handle mini-game results
+    const miniGameCallback = (success, score) => {
+      console.log(
+        `Mini-game completed with success=${success}, score=${score}`
+      );
+
+      // Resume the game state
+      this.gameState = "playing";
+
+      // Resume timers
+      if (this.revealTimer) {
+        this.revealTimer.paused = false;
+      }
+
+      // Update score from mini-game
+      this.score = score;
+      this.scoreText.setText(`Score: ${this.score}`);
+
+      // Process the defense placement based on mini-game success
+      if (success) {
+        console.log(
+          `Placing correct defense for threat: ${this.miniGameThreat} at row: ${this.miniGameRow}, col: ${this.miniGameCol}`
+        );
+
+        // Get the correct solution for this threat
+        const correctSolution = this.THREATS[this.miniGameThreat].solution;
+
+        // Set selected defense to the correct one
+        this.selectDefense(correctSolution);
+
+        // Place the defense
+        this.finalizeDefensePlacement(this.miniGameRow, this.miniGameCol, true);
+      } else {
+        // Mini-game failed, don't place defense
+        this.statusText.setText("Mini-game failed! Try again.");
+        this.statusText.setBackgroundColor("#cc6600");
+      }
+    };
+
+    // Launch appropriate mini-game based on threat type
+    switch (threatType) {
+      case "portScan":
+        this.scene.launch("PortScanMiniGame", {
+          mainScene: this,
+          row: row,
+          col: col,
+          score: this.score,
+          callback: miniGameCallback,
+        });
+        this.scene.pause();
+        break;
+      case "passwordCrack":
+        this.scene.launch("PasswordCrackMiniGame", {
+          mainScene: this,
+          row: row,
+          col: col,
+          score: this.score,
+          callback: miniGameCallback,
+        });
+        this.scene.pause();
+        break;
+      // Add cases for other threat types as you develop their mini-games
+      default:
+        // No mini-game for this threat type, proceed with normal defense placement
+        this.finalizeDefensePlacement(row, col, true);
+        break;
+    }
+  }
+
   placeDefense(row, col) {
     if (this.gameState !== "playing") return;
     if (!this.selectedDefense || !this.DEFENSES[this.selectedDefense]) return;
     if (this.grid[row][col]) return; // Cell already has a defense
 
+    const threatType = this.threatGrid[row][col];
+    if (!threatType) return; // No threat in this cell
+
+    // Launch mini-game based on threat type
+    this.launchMiniGame(row, col, threatType);
+  }
+
+  // Add this method to handle the final defense placement after mini-game
+  finalizeDefensePlacement(row, col, wasSuccessful) {
     const threatType = this.threatGrid[row][col];
     if (!threatType) return; // No threat in this cell
 
@@ -786,8 +886,6 @@ class GameScene extends Phaser.Scene {
 
       // Update score
       this.scoreText.setText(`Score: ${this.score}`);
-
-      // Note: We're NOT showing the threat again as per requirement
     }
 
     // Update high score if needed
