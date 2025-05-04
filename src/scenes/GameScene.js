@@ -717,7 +717,6 @@ class GameScene extends Phaser.Scene {
     this.visibleThreats[row][col] = false;
   }
 
-  // Fixed launchMiniGame method in GameScene with improved callback handling
   launchMiniGame(row, col, threatType) {
     // Save current game state and position for later use
     this.gameState = "miniGame";
@@ -742,7 +741,10 @@ class GameScene extends Phaser.Scene {
     // Define a callback function to handle mini-game results
     const miniGameCallback = (success, score) => {
       console.log(
-        `Mini-game completed with success=${success}, score=${score}`
+        "miniGameCallback executed with success:",
+        success,
+        "score:",
+        score
       );
 
       // Resume the game state
@@ -778,33 +780,23 @@ class GameScene extends Phaser.Scene {
       }
     };
 
+    // Make sure the callback is bound to this context
+    const boundCallback = miniGameCallback.bind(this);
+
     // Launch appropriate mini-game based on threat type
     switch (threatType) {
-      case "portScan":
-        this.scene.launch("PortScanMiniGame", {
+      case "malware":
+        console.log("Launching MalwareWhackMiniGame");
+        this.scene.launch("MalwareWhackMiniGame", {
           mainScene: this,
           row: row,
           col: col,
           score: this.score,
-          callback: miniGameCallback,
+          callback: boundCallback, // Use the bound callback
         });
         this.scene.pause();
         break;
-      case "passwordCrack":
-        this.scene.launch("PasswordCrackMiniGame", {
-          mainScene: this,
-          row: row,
-          col: col,
-          score: this.score,
-          callback: miniGameCallback,
-        });
-        this.scene.pause();
-        break;
-      // Add cases for other threat types as you develop their mini-games
-      default:
-        // No mini-game for this threat type, proceed with normal defense placement
-        this.finalizeDefensePlacement(row, col, true);
-        break;
+      // other cases...
     }
   }
 

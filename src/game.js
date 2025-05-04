@@ -17,6 +17,7 @@ class Game extends Phaser.Game {
         GameOverScene,
         PortScanMiniGame, // Port Scan mini-game
         PasswordCrackMiniGame, // Password Crack mini-game
+        MalwareWhackMiniGame,
       ],
       physics: {
         default: "arcade",
