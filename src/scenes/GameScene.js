@@ -330,9 +330,9 @@ class GameScene extends Phaser.Scene {
     const defensePanel = this.add
       .rectangle(
         sectionWidth / 2 + 20, // Position from left edge
-        height - 190, // Position from bottom - moved up by 80 pixels
+        height - 160, // Position from bottom - moved up by 80 pixels
         sectionWidth + 40, // Made wider
-        240, // Made taller
+        400, // Made taller
         0x2d2d2d
       )
       .setStrokeStyle(1, 0x4d4d4d);
@@ -353,7 +353,7 @@ class GameScene extends Phaser.Scene {
 
     // Center the grid in the left section - moved higher
     const startX = (sectionWidth - gridWidth) / 2 + 20; // Add left margin
-    const startY = height - 250; // Position from top - moved up
+    const startY = height - 280; // Position from top - moved up
 
     // Create buttons for each defense type
     let index = 0;
@@ -417,9 +417,9 @@ class GameScene extends Phaser.Scene {
     const threatPanel = this.add
       .rectangle(
         sectionX + sectionWidth / 2,
-        height - 190, // Same Y position as defense buttons - moved up by 80 pixels
+        height - 160, // Same Y position as defense buttons - moved up by 80 pixels
         sectionWidth + 40, // Made wider
-        240, // Made taller
+        400, // Made taller
         0x2d2d2d
       )
       .setStrokeStyle(1, 0x4d4d4d);
@@ -428,7 +428,7 @@ class GameScene extends Phaser.Scene {
     this.add
       .text(
         sectionX + sectionWidth / 2,
-        height - 290, // Moved up
+        height - 330, // Moved up
         "THREAT TYPES & COUNTERS",
         {
           font: "bold 16px Arial",
@@ -439,23 +439,23 @@ class GameScene extends Phaser.Scene {
 
     // Create a grid of threat-defense pairs
     const threatKeys = Object.keys(this.THREATS);
-    const pairWidth = 90; // Width for each threat-defense pair
-    const pairHeight = 50; // Height for each pair
-    const padding = 10;
+    const pairWidth = 150; // Width for each threat-defense pair
+    const pairHeight = 80; // Height for each pair
+    const padding = 30;
     const rows = 3;
     const cols = 3;
 
     // Calculate start position in the right section - moved higher
     const startX =
       sectionX + (sectionWidth - (cols * pairWidth + (cols - 1) * padding)) / 2;
-    const startY = height - 250; // Same Y starting point as defense grid - moved up
+    const startY = height - 320; // Same Y starting point as defense grid - moved up
 
     // Create the threat-defense pairs in a grid
     threatKeys.forEach((key, index) => {
       const row = Math.floor(index / cols);
       const col = index % cols;
 
-      const x = startX + col * (pairWidth + padding) + pairWidth / 2;
+      const x = startX + col * (pairWidth + padding - 10) + pairWidth / 2;
       const y = startY + row * (pairHeight + padding) + pairHeight / 2;
 
       const threat = this.THREATS[key];
@@ -718,6 +718,22 @@ class GameScene extends Phaser.Scene {
   }
 
   launchMiniGame(row, col, threatType) {
+    // Check if there is a mini-game for this threat type
+    const hasMinigame = [
+      "portScan",
+      "passwordCrack",
+      "ransomware",
+      "rootkit",
+      "malware",
+      "ddos",
+    ].includes(threatType);
+
+    // If no mini-game exists for this threat, proceed directly with normal defense placement
+    if (!hasMinigame) {
+      this.finalizeDefensePlacement(row, col, true);
+      return;
+    }
+
     // Save current game state and position for later use
     this.gameState = "miniGame";
     this.miniGameRow = row;
@@ -783,8 +799,57 @@ class GameScene extends Phaser.Scene {
     // Make sure the callback is bound to this context
     const boundCallback = miniGameCallback.bind(this);
 
+    // Set up a listener for when the mini-game scene stops without proper completion
+    const miniGameKey = this.getMiniGameKey(threatType);
+    if (miniGameKey) {
+      // Listen for when the scene stops (user might press escape or close it somehow)
+      this.events.once("resume", this.handleMiniGameReturn, this);
+    }
+
     // Launch appropriate mini-game based on threat type
     switch (threatType) {
+      case "portScan":
+        this.scene.launch("PortScanMiniGame", {
+          mainScene: this,
+          row: row,
+          col: col,
+          score: this.score,
+          callback: boundCallback,
+        });
+        this.scene.pause();
+        break;
+      case "passwordCrack":
+        this.scene.launch("PasswordCrackMiniGame", {
+          mainScene: this,
+          row: row,
+          col: col,
+          score: this.score,
+          callback: boundCallback,
+        });
+        this.scene.pause();
+        break;
+      case "ransomware":
+        console.log("Launching RansomwareMiniGame");
+        this.scene.launch("RansomwareMiniGame", {
+          mainScene: this,
+          row: row,
+          col: col,
+          score: this.score,
+          callback: boundCallback,
+        });
+        this.scene.pause();
+        break;
+      case "rootkit":
+        console.log("Launching RootkitMiniGame");
+        this.scene.launch("RootkitMiniGame", {
+          mainScene: this,
+          row: row,
+          col: col,
+          score: this.score,
+          callback: boundCallback,
+        });
+        this.scene.pause();
+        break;
       case "malware":
         console.log("Launching MalwareWhackMiniGame");
         this.scene.launch("MalwareWhackMiniGame", {
@@ -792,16 +857,80 @@ class GameScene extends Phaser.Scene {
           row: row,
           col: col,
           score: this.score,
-          callback: boundCallback, // Use the bound callback
+          callback: boundCallback,
         });
         this.scene.pause();
         break;
-      // other cases...
+      case "ddos":
+        console.log("Launching DDoSMiniGame");
+        this.scene.launch("DDOSMiniGame", {
+          mainScene: this,
+          row: row,
+          col: col,
+          score: this.score,
+          callback: boundCallback,
+        });
+        this.scene.pause();
+        break;
     }
   }
 
+  // Helper method to get the scene key based on threat type
+  getMiniGameKey(threatType) {
+    switch (threatType) {
+      case "portScan":
+        return "PortScanMiniGame";
+      case "passwordCrack":
+        return "PasswordCrackMiniGame";
+      case "ransomware":
+        return "RansomwareMiniGame";
+      case "rootkit":
+        return "RootkitMiniGame";
+      case "malware":
+        return "MalwareWhackMiniGame";
+      case "ddos":
+        return "DDOSMiniGame";
+      default:
+        return null;
+    }
+  }
+
+  handleMiniGameReturn() {
+    // This method will be called when returning from a mini-game
+    // without completing it, to ensure the game state is properly reset
+    console.log("Handling return from mini-game");
+
+    // Reset game state to playing
+    this.gameState = "playing";
+
+    // Resume any paused timers
+    if (this.revealTimer && this.revealTimer.paused) {
+      this.revealTimer.paused = false;
+    }
+
+    // Update status
+    this.statusText.setText("Select a defense and place it on a threat cell!");
+    this.statusText.setBackgroundColor("#00498b");
+
+    // Clear any mini-game related data
+    this.miniGameRow = null;
+    this.miniGameCol = null;
+    this.miniGameThreat = null;
+  }
+
   placeDefense(row, col) {
-    if (this.gameState !== "playing") return;
+    if (this.gameState !== "playing") {
+      // If game state is not playing, it might be stuck in "miniGame" state
+      // Reset the state and try again
+      if (this.gameState === "miniGame") {
+        this.handleMiniGameReturn();
+        // Now attempt to place defense again with the corrected state
+        this.placeDefense(row, col);
+        return;
+      }
+      return;
+    }
+
     if (!this.selectedDefense || !this.DEFENSES[this.selectedDefense]) return;
     if (this.grid[row][col]) return; // Cell already has a defense
 
